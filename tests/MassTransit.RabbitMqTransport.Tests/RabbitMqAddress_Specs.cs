@@ -113,6 +113,47 @@ namespace MassTransit.RabbitMqTransport.Tests
 
 
     [TestFixture]
+    public class Given_an_address_with_arguments
+    {
+        [Test]
+        public void Should_parse_exchange_arguments()
+        {
+            var hostAddress = new Uri("rabbitmq://localhost/test");
+
+            var address = new RabbitMqEndpointAddress(hostAddress, new Uri("exchange://test?args[x-test-a]=1&args[x-test-b]=2"));
+
+            Assert.That(address.Name, Is.EqualTo("test"));
+            Assert.That(address.QueueName, Is.Null);
+            Assert.That(address.BindToQueue, Is.False);
+
+            Assert.That(address.ExchangeArguments, Is.Not.Null);
+            Assert.That(address.ExchangeArguments, Contains.Key("x-test-a"));
+            Assert.That(address.ExchangeArguments, Contains.Key("x-test-b"));
+
+            Assert.That(address.QueueArguments, Is.Not.Null);
+        }
+
+        [Test]
+        public void Should_parse_queue_arguments()
+        {
+            var hostAddress = new Uri("rabbitmq://localhost/test");
+
+            var address = new RabbitMqEndpointAddress(hostAddress, new Uri("queue://test?queueargs[x-test-a]=1&queueargs[x-test-b]=2"));
+
+            Assert.That(address.Name, Is.EqualTo("test"));
+            Assert.That(address.QueueName, Is.EqualTo("test"));
+            Assert.That(address.BindToQueue, Is.True);
+
+            Assert.That(address.ExchangeArguments, Is.Not.Null);
+
+            Assert.That(address.QueueArguments, Is.Not.Null);
+            Assert.That(address.QueueArguments, Contains.Key("x-test-a"));
+            Assert.That(address.QueueArguments, Contains.Key("x-test-b"));
+        }
+    }
+
+
+    [TestFixture]
     public class Given_a_valid_endpoint_address
     {
         [Test]

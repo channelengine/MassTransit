@@ -4,6 +4,8 @@ namespace MassTransit.RabbitMqTransport
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
+    using System.Text.RegularExpressions;
+    using System.Threading;
     using Topology;
     using Util;
 
@@ -20,6 +22,12 @@ namespace MassTransit.RabbitMqTransport
         const string AlternateExchangeKey = "alternateexchange";
         const string BindExchangeKey = "bindexchange";
         const string DelayedTypeKey = "delayedtype";
+
+        const string ArgumentsKey = "args";
+        const string QueueArgumentsKey = "queueargs";
+
+        static readonly Regex ArgumentsPattern = new Regex(@$"{ArgumentsKey}\[(?<key>.+?)\]");
+        static readonly Regex QueueArgumentsPattern = new Regex(@$"{QueueArgumentsKey}\[(?<key>.+?)\]");
 
         const string DelayedMessageExchangeType = "x-delayed-message";
 
@@ -38,6 +46,9 @@ namespace MassTransit.RabbitMqTransport
         public readonly string[] BindExchanges;
         public readonly string AlternateExchange;
 
+        public readonly Dictionary<string, string> Arguments;
+        public readonly Dictionary<string, string> QueueArguments;
+
         public RabbitMqEndpointAddress(Uri hostAddress, Uri address)
         {
             Scheme = default;
@@ -54,6 +65,9 @@ namespace MassTransit.RabbitMqTransport
             DelayedType = default;
             AlternateExchange = default;
             BindExchanges = default;
+
+            Arguments = default;
+            QueueArguments = default;
 
             var scheme = address.Scheme.ToLowerInvariant();
             if (scheme.EndsWith("s"))
@@ -98,6 +112,12 @@ namespace MassTransit.RabbitMqTransport
 
             foreach (var (key, value) in address.SplitQueryString())
             {
+                if (ParseArguments(key, value, ArgumentsPattern, Arguments))
+                    continue;
+
+                if (ParseArguments(key, value, QueueArgumentsPattern, QueueArguments))
+                    continue;
+
                 switch (key)
                 {
                     case TemporaryKey when bool.TryParse(value, out var result):
@@ -146,7 +166,7 @@ namespace MassTransit.RabbitMqTransport
 
         public RabbitMqEndpointAddress(Uri hostAddress, string exchangeName, string exchangeType = default, bool durable = true, bool autoDelete = false,
             bool bindToQueue = false, string queueName = default, string delayedType = default, string[] bindExchanges = default,
-            string alternateExchange = default)
+            string alternateExchange = default, Dictionary<string, string> arguments = default, Dictionary<string, string> queueArguments = default)
         {
             ParseLeft(hostAddress, out Scheme, out Host, out Port, out VirtualHost);
 
@@ -160,10 +180,14 @@ namespace MassTransit.RabbitMqTransport
             DelayedType = delayedType;
             BindExchanges = bindExchanges;
             AlternateExchange = alternateExchange;
+
+            Arguments = arguments;
+            QueueArguments = queueArguments;
         }
 
         RabbitMqEndpointAddress(string scheme, string host, int? port, string virtualHost, string name, string exchangeType, bool durable,
-            bool autoDelete, bool bindToQueue, string queueName, string delayedType, string[] bindExchanges, string alternateExchange)
+            bool autoDelete, bool bindToQueue, string queueName, string delayedType, string[] bindExchanges, string alternateExchange,
+            Dictionary<string, string> arguments = default, Dictionary<string, string> queueArguments = default)
         {
             Scheme = scheme;
             Host = host;
@@ -178,6 +202,9 @@ namespace MassTransit.RabbitMqTransport
             DelayedType = delayedType;
             BindExchanges = bindExchanges;
             AlternateExchange = alternateExchange;
+
+            Arguments = arguments;
+            QueueArguments = queueArguments;
         }
 
         public RabbitMqEndpointAddress GetDelayAddress()
@@ -195,6 +222,20 @@ namespace MassTransit.RabbitMqTransport
             host = hostAddress.Host;
             port = hostAddress.Port;
             virtualHost = hostAddress.VirtualHost;
+        }
+
+        static bool ParseArguments(string key, string value, Regex pattern, Dictionary<string, string> arguments)
+        {
+            var match = pattern.Match(key);
+            if (match.Success)
+            {
+                var argumentKey = match.Groups["key"].Value;
+                arguments[argumentKey] = value;
+
+                return true;
+            }
+
+            return false;
         }
 
         public static implicit operator Uri(in RabbitMqEndpointAddress address)
@@ -251,6 +292,18 @@ namespace MassTransit.RabbitMqTransport
             {
                 foreach (var binding in BindExchanges)
                     yield return $"{BindExchangeKey}={binding}";
+            }
+
+            if (Arguments != null)
+            {
+                foreach (var kvp in Arguments)
+                    yield return $"{ArgumentsKey}[{kvp.Key}={kvp.Value}]";
+            }
+
+            if (QueueArguments != null)
+            {
+                foreach (var kvp in QueueArguments)
+                    yield return $"{QueueArgumentsKey}[{kvp.Key}={kvp.Value}]";
             }
         }
     }

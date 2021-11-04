@@ -23,10 +23,10 @@ namespace MassTransit.RabbitMqTransport
         const string BindExchangeKey = "bindexchange";
         const string DelayedTypeKey = "delayedtype";
 
-        const string ArgumentsKey = "args";
+        const string ExchangeArgumentsKey = "args";
         const string QueueArgumentsKey = "queueargs";
 
-        static readonly Regex ArgumentsPattern = new Regex(@$"{ArgumentsKey}\[(?<key>.+?)\]");
+        static readonly Regex ExchangeArgumentsPattern = new Regex(@$"{ExchangeArgumentsKey}\[(?<key>.+?)\]");
         static readonly Regex QueueArgumentsPattern = new Regex(@$"{QueueArgumentsKey}\[(?<key>.+?)\]");
 
         const string DelayedMessageExchangeType = "x-delayed-message";
@@ -46,7 +46,7 @@ namespace MassTransit.RabbitMqTransport
         public readonly string[] BindExchanges;
         public readonly string AlternateExchange;
 
-        public readonly Dictionary<string, string> Arguments;
+        public readonly Dictionary<string, string> ExchangeArguments;
         public readonly Dictionary<string, string> QueueArguments;
 
         public RabbitMqEndpointAddress(Uri hostAddress, Uri address)
@@ -66,7 +66,7 @@ namespace MassTransit.RabbitMqTransport
             AlternateExchange = default;
             BindExchanges = default;
 
-            Arguments = default;
+            ExchangeArguments = default;
             QueueArguments = default;
 
             var scheme = address.Scheme.ToLowerInvariant();
@@ -112,7 +112,7 @@ namespace MassTransit.RabbitMqTransport
 
             foreach (var (key, value) in address.SplitQueryString())
             {
-                if (ParseArguments(key, value, ArgumentsPattern, Arguments))
+                if (ParseArguments(key, value, ExchangeArgumentsPattern, ExchangeArguments))
                     continue;
 
                 if (ParseArguments(key, value, QueueArgumentsPattern, QueueArguments))
@@ -166,7 +166,7 @@ namespace MassTransit.RabbitMqTransport
 
         public RabbitMqEndpointAddress(Uri hostAddress, string exchangeName, string exchangeType = default, bool durable = true, bool autoDelete = false,
             bool bindToQueue = false, string queueName = default, string delayedType = default, string[] bindExchanges = default,
-            string alternateExchange = default, Dictionary<string, string> arguments = default, Dictionary<string, string> queueArguments = default)
+            string alternateExchange = default, Dictionary<string, string> exchangeArguments = default, Dictionary<string, string> queueArguments = default)
         {
             ParseLeft(hostAddress, out Scheme, out Host, out Port, out VirtualHost);
 
@@ -181,13 +181,13 @@ namespace MassTransit.RabbitMqTransport
             BindExchanges = bindExchanges;
             AlternateExchange = alternateExchange;
 
-            Arguments = arguments;
+            ExchangeArguments = exchangeArguments;
             QueueArguments = queueArguments;
         }
 
         RabbitMqEndpointAddress(string scheme, string host, int? port, string virtualHost, string name, string exchangeType, bool durable,
             bool autoDelete, bool bindToQueue, string queueName, string delayedType, string[] bindExchanges, string alternateExchange,
-            Dictionary<string, string> arguments = default, Dictionary<string, string> queueArguments = default)
+            Dictionary<string, string> exchangeArguments = default, Dictionary<string, string> queueArguments = default)
         {
             Scheme = scheme;
             Host = host;
@@ -203,7 +203,7 @@ namespace MassTransit.RabbitMqTransport
             BindExchanges = bindExchanges;
             AlternateExchange = alternateExchange;
 
-            Arguments = arguments;
+            ExchangeArguments = exchangeArguments;
             QueueArguments = queueArguments;
         }
 
@@ -294,10 +294,10 @@ namespace MassTransit.RabbitMqTransport
                     yield return $"{BindExchangeKey}={binding}";
             }
 
-            if (Arguments != null)
+            if (ExchangeArguments != null)
             {
-                foreach (var kvp in Arguments)
-                    yield return $"{ArgumentsKey}[{kvp.Key}={kvp.Value}]";
+                foreach (var kvp in ExchangeArguments)
+                    yield return $"{ExchangeArgumentsKey}[{kvp.Key}={kvp.Value}]";
             }
 
             if (QueueArguments != null)

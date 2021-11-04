@@ -38,9 +38,9 @@ namespace MassTransit.RabbitMqTransport.Topology.Settings
             if (!string.IsNullOrWhiteSpace(address.AlternateExchange))
                 SetExchangeArgument("alternate-exchange", address.AlternateExchange);
 
-            if(address.Arguments != null)
+            if(address.ExchangeArguments != null)
             {
-                foreach(var kvp in address.Arguments)
+                foreach(var kvp in address.ExchangeArguments)
                     SetExchangeArgument(kvp.Key, kvp.Value);
             }
 

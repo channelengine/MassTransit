@@ -120,7 +120,7 @@ namespace MassTransit.RabbitMqTransport.Tests
         {
             var hostAddress = new Uri("rabbitmq://localhost/test");
 
-            var address = new RabbitMqEndpointAddress(hostAddress, new Uri("exchange://test?args[x-test-a]=1&args[x-test-b]=2"));
+            var address = new RabbitMqEndpointAddress(hostAddress, new Uri("exchange:test?args-x-test-a=1&args-x-test-b=2"));
 
             Assert.That(address.Name, Is.EqualTo("test"));
             Assert.That(address.QueueName, Is.Null);
@@ -138,10 +138,10 @@ namespace MassTransit.RabbitMqTransport.Tests
         {
             var hostAddress = new Uri("rabbitmq://localhost/test");
 
-            var address = new RabbitMqEndpointAddress(hostAddress, new Uri("queue://test?queueargs[x-test-a]=1&queueargs[x-test-b]=2"));
+            var address = new RabbitMqEndpointAddress(hostAddress, new Uri("queue:test?queueargs-x-test-a=1&queueargs-x-test-b=2"));
 
             Assert.That(address.Name, Is.EqualTo("test"));
-            Assert.That(address.QueueName, Is.EqualTo("test"));
+            Assert.That(address.QueueName, Is.Null);
             Assert.That(address.BindToQueue, Is.True);
 
             Assert.That(address.ExchangeArguments, Is.Not.Null);

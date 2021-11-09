@@ -23,11 +23,8 @@ namespace MassTransit.RabbitMqTransport
         const string BindExchangeKey = "bindexchange";
         const string DelayedTypeKey = "delayedtype";
 
-        const string ExchangeArgumentsKey = "args";
-        const string QueueArgumentsKey = "queueargs";
-
-        static readonly Regex ExchangeArgumentsPattern = new Regex(@$"{ExchangeArgumentsKey}\[(?<key>.+?)\]");
-        static readonly Regex QueueArgumentsPattern = new Regex(@$"{QueueArgumentsKey}\[(?<key>.+?)\]");
+        const string ExchangeArgumentsKeyPrefix = "args-";
+        const string QueueArgumentsKeyPrefix = "queueargs-";
 
         const string DelayedMessageExchangeType = "x-delayed-message";
 
@@ -66,8 +63,8 @@ namespace MassTransit.RabbitMqTransport
             AlternateExchange = default;
             BindExchanges = default;
 
-            ExchangeArguments = default;
-            QueueArguments = default;
+            ExchangeArguments = new Dictionary<string, string>();
+            QueueArguments = new Dictionary<string, string>();
 
             var scheme = address.Scheme.ToLowerInvariant();
             if (scheme.EndsWith("s"))
@@ -112,10 +109,10 @@ namespace MassTransit.RabbitMqTransport
 
             foreach (var (key, value) in address.SplitQueryString())
             {
-                if (ParseArguments(key, value, ExchangeArgumentsPattern, ExchangeArguments))
+                if (ParseArguments(key, value, ExchangeArgumentsKeyPrefix, ExchangeArguments))
                     continue;
 
-                if (ParseArguments(key, value, QueueArgumentsPattern, QueueArguments))
+                if (ParseArguments(key, value, QueueArgumentsKeyPrefix, QueueArguments))
                     continue;
 
                 switch (key)
@@ -224,18 +221,22 @@ namespace MassTransit.RabbitMqTransport
             virtualHost = hostAddress.VirtualHost;
         }
 
-        static bool ParseArguments(string key, string value, Regex pattern, Dictionary<string, string> arguments)
+        static bool ParseArguments(string key, string value, string prefix, Dictionary<string, string> arguments)
         {
-            var match = pattern.Match(key);
-            if (match.Success)
-            {
-                var argumentKey = match.Groups["key"].Value;
-                arguments[argumentKey] = value;
+            if (string.IsNullOrEmpty(key)
+                || !key.StartsWith(prefix)
+                || string.IsNullOrEmpty(prefix)
+                || string.IsNullOrEmpty(value)
+                || arguments == null
+            ) return false;
 
-                return true;
-            }
+            var argumentKey = key.Replace(prefix, string.Empty);
+            if (string.IsNullOrEmpty(argumentKey))
+                return false;
 
-            return false;
+            arguments[argumentKey] = value;
+            return true;
+
         }
 
         public static implicit operator Uri(in RabbitMqEndpointAddress address)
@@ -297,13 +298,13 @@ namespace MassTransit.RabbitMqTransport
             if (ExchangeArguments != null)
             {
                 foreach (var kvp in ExchangeArguments)
-                    yield return $"{ExchangeArgumentsKey}[{kvp.Key}={kvp.Value}]";
+                    yield return $"{ExchangeArgumentsKeyPrefix}{kvp.Key}={kvp.Value}";
             }
 
             if (QueueArguments != null)
             {
                 foreach (var kvp in QueueArguments)
-                    yield return $"{QueueArgumentsKey}[{kvp.Key}={kvp.Value}]";
+                    yield return $"{QueueArgumentsKeyPrefix}{kvp.Key}={kvp.Value}";
             }
         }
     }

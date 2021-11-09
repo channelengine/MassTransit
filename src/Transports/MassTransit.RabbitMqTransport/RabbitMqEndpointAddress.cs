@@ -294,18 +294,6 @@ namespace MassTransit.RabbitMqTransport
                 foreach (var binding in BindExchanges)
                     yield return $"{BindExchangeKey}={binding}";
             }
-
-            if (ExchangeArguments != null)
-            {
-                foreach (var kvp in ExchangeArguments)
-                    yield return $"{ExchangeArgumentsKeyPrefix}{kvp.Key}={kvp.Value}";
-            }
-
-            if (QueueArguments != null)
-            {
-                foreach (var kvp in QueueArguments)
-                    yield return $"{QueueArgumentsKeyPrefix}{kvp.Key}={kvp.Value}";
-            }
         }
     }
 }
